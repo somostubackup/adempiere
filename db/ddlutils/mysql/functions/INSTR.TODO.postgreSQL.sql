@@ -36,83 +36,85 @@
 -- of string2.  If n is negative, search backwards.  If m is not passed,
 -- assume 1 (search starts at first character).
 --
+/**********************************************************************
+* Se modifica y se crean 2 funciones con un número que identifica la  *
+* cantidad de parámetros, luego se modifica en la clase respectiva    *
+* para que haga la traducción de la función en base a los parámetros  *
+***********************************************************************
+ * 
+ */
 
-CREATE FUNCTION instr(varchar, varchar) RETURNS integer AS $$
-DECLARE
-    pos integer;
+DELIMITER $$
+
+CREATE FUNCTION instr3(string varchar(255), string_to_search varchar(255), beg_index integer)
+RETURNS integer
 BEGIN
-    pos:= instr($1, $2, 1);
-    RETURN pos;
-END;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+DECLARE pos integer DEFAULT 0;
+DECLARE temp_str varchar(255);
+DECLARE beg integer;
+DECLARE length integer;
+DECLARE ss_length integer;
 
+    IF (beg_index > 0) THEN
+        SET temp_str = substring(string,beg_index);
+        SET pos = instr( temp_str, string_to_search);
 
-CREATE FUNCTION instr(string varchar, string_to_search varchar, beg_index integer)
-RETURNS integer AS $$
-DECLARE
-    pos integer NOT NULL DEFAULT 0;
-    temp_str varchar;
-    beg integer;
-    length integer;
-    ss_length integer;
-BEGIN
-    IF beg_index > 0 THEN
-        temp_str := substring(string FROM beg_index);
-        pos := position(string_to_search IN temp_str);
-
-        IF pos = 0 THEN
+        IF (pos = 0) THEN
             RETURN 0;
         ELSE
             RETURN pos + beg_index - 1;
         END IF;
     ELSE
-        ss_length := char_length(string_to_search);
-        length := char_length(string);
-        beg := length + beg_index - ss_length + 2;
+         set ss_length = length(string_to_search);
+        set length = length(string);
+        set beg = length + beg_index - ss_length + 2;
 
-        WHILE beg > 0 LOOP
-            temp_str := substring(string FROM beg FOR ss_length);
-            pos := position(string_to_search IN temp_str);
+        index_loop: LOOP
+			IF beg <=0 THEN 
+				LEAVE index_loop;
+			END IF;
+            SET temp_str = substring(string, beg,ss_length);
+            set pos = instr(string_to_search,temp_str);
 
             IF pos > 0 THEN
                 RETURN beg;
             END IF;
 
-            beg := beg - 1;
+            SET beg = beg - 1;
         END LOOP;
 
         RETURN 0;
     END IF;
 END;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+$$ 
 
 
-CREATE FUNCTION instr(string varchar, string_to_search varchar,
+CREATE FUNCTION instr4(string varchar(255), string_to_search varchar(255),
                       beg_index integer, occur_index integer)
-RETURNS integer AS $$
-DECLARE
-    pos integer NOT NULL DEFAULT 0;
-    occur_number integer NOT NULL DEFAULT 0;
-    temp_str varchar;
-    beg integer;
-    i integer;
-    length integer;
-    ss_length integer;
+RETURNS integer 
 BEGIN
+DECLARE pos integer DEFAULT 0;
+DECLARE occur_number integer DEFAULT 0;
+DECLARE temp_str varchar(255);
+DECLARE beg integer;
+DECLARE i integer;
+DECLARE length integer;
+DECLARE ss_length integer;
     IF beg_index > 0 THEN
-        beg := beg_index;
-        temp_str := substring(string FROM beg_index);
+        set beg = beg_index;
+        set temp_str = substring(string,beg_index);
+		index_loop: LOOP
+			IF i > occur_index THEN
+				LEAVE index_loop;
+			END IF;
+			 SET pos = instr(string_to_search, temp_str);
+				IF i = 1 THEN
+					SET beg = beg + pos - 1;
+				ELSE
+					SET beg = beg + pos;
+				END IF;
 
-        FOR i IN 1..occur_index LOOP
-            pos := position(string_to_search IN temp_str);
-
-            IF i = 1 THEN
-                beg := beg + pos - 1;
-            ELSE
-                beg := beg + pos;
-            END IF;
-
-            temp_str := substring(string FROM beg + 1);
+				SET temp_str = substring(string FROM beg + 1);
         END LOOP;
 
         IF pos = 0 THEN
@@ -121,26 +123,26 @@ BEGIN
             RETURN beg;
         END IF;
     ELSE
-        ss_length := char_length(string_to_search);
-        length := char_length(string);
-        beg := length + beg_index - ss_length + 2;
-
-        WHILE beg > 0 LOOP
-            temp_str := substring(string FROM beg FOR ss_length);
-            pos := position(string_to_search IN temp_str);
-
+        SET ss_length = length(string_to_search);
+        SET length = length(string);
+        SET beg = length + beg_index - ss_length + 2;
+		index_loop: LOOP
+			IF beg <= 0 THEN
+				LEAVE index_loop;
+			END IF;
+			SET temp_str = substring(string,beg,ss_length);
+            SET pos = INSTR(string_to_search,temp_str);
             IF pos > 0 THEN
-                occur_number := occur_number + 1;
-
+                SET occur_number = occur_number + 1;
                 IF occur_number = occur_index THEN
                     RETURN beg;
                 END IF;
             END IF;
 
-            beg := beg - 1;
+            SET beg = beg - 1;
         END LOOP;
 
         RETURN 0;
     END IF;
 END;
-$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+$$
